@@ -12,6 +12,23 @@
 
 (defn show [win x y] (doto win (.setSize x y) (.setVisible true)))
 (def random (java.util.Random.))
+(def M_PI 3.1415926535)
+(defn LRAND [] (bit-and (. random nextLong) 0x7fffffff))
+(defn NRAND [n] (mod (LRAND) n))
+(def MAXRAND 2147483648.0)
+(defn FLOATRAND [] (/ (LRAND) MAXRAND))
+(def DELTAT (* 50 0.0001))
+(def GALAXYRANGESIZE 0.1)
+(def GALAXYMINSIZE 0.15)
+(def QCONS 0.001)
+;#define LRAND()         ((long) (random() & 0x7fffffff))
+;#define NRAND(n)        ((int) (LRAND() % (n)))
+;#define MAXRAND         (2147483648.0) /* unsigned 1<<31 as a float */
+;#define FLOATRAND ((double) LRAND() / ((double) MAXRAND))
+;#define MAX_IDELTAT    50
+;#define DELTAT (MAX_IDELTAT * 0.0001)
+;#define GALAXYRANGESIZE  0.1
+;#define GALAXYMINSIZE  0.15
 (defn randomColor [] (. random nextInt))
 (defn point [x y] { :x x :y y })
 (defn star [pos vel] { :pos pos :vel vel })
@@ -39,47 +56,88 @@
     :rot_y rot_y
     :rot_x rot_x
     })
-(defn build-star []
+(defn build-star [pos vel size mass mat]
+    (let [
+          w (* 2.0 M_PI (FLOATRAND))
+          sinw (Math/sin w)
+          cosw (Math/cos w)
+          d (* (FLOATRAND) size)
+;   h = FLOATRAND * exp(-2.0 * (d / gp->size)) / 5.0 * gp->size;
+;   if (FLOATRAND < 0.5)
+;    h = -h;
+          h ((fn [x] (if (< (FLOATRAND) 0.5) (- x) x))
+             (* (FLOATRAND) (/ (Math/exp (* -2.0 (/ d size))) 5.0) size))
+;   v = sqrt(gt->mass * QCONS / sqrt(d * d + h * h));
+          v (Math/sqrt (/ (* mass QCONS) (Math/sqrt (+ (* d d) (* h h)))))
+         ]
     (star
-        [0.0 0.0 0.0];pos
-        [0.0 0.0 0.0];vel
+;   st->pos[0] = gp->mat[0][0] * d * cosw + gp->mat[1][0] * d * sinw + gp->mat[2][0] * h + gt->pos[0];
+;   st->pos[1] = gp->mat[0][1] * d * cosw + gp->mat[1][1] * d * sinw + gp->mat[2][1] * h + gt->pos[1];
+;   st->pos[2] = gp->mat[0][2] * d * cosw + gp->mat[1][2] * d * sinw + gp->mat[2][2] * h + gt->pos[2];
+        (apply vector
+            (map (fn [x y z pos] (+ (* x d cosw) (* y d sinw) (* z h) pos))
+                (first mat) (second mat) (nth mat 2) pos)) ;pos
+;   st->vel[0] = -gp->mat[0][0] * v * sinw + gp->mat[1][0] * v * cosw + gt->vel[0];
+;   st->vel[1] = -gp->mat[0][1] * v * sinw + gp->mat[1][1] * v * cosw + gt->vel[1];
+;   st->vel[2] = -gp->mat[0][2] * v * sinw + gp->mat[1][2] * v * cosw + gt->vel[2];
+;
+;   st->vel[0] *= DELTAT;
+;   st->vel[1] *= DELTAT;
+;   st->vel[2] *= DELTAT;
+        (apply vector
+            (map (fn [x y vel] (* DELTAT (+ (* (- x) v sinw) (* y v cosw) vel)))
+                (first mat) (second mat) vel)) ;vel
+    )
     ))
-(defn build-stars [n]
-    (loop [ss [] cnt 0]
-    (if (< cnt n)
-        (recur (assoc ss cnt (build-star)) (inc cnt))
-        ss
-    )))
-(defn build-points [n point-init]
-    ;(take n (cycle [(point 0 0)])) 
-    (take n (cycle [(point-init)]))) 
-(defn build-galaxy [n]
-    ; don't do anything random right now
-    (let [s (build-stars n)]
+(defn build-vector [n init]
+    (apply vector (map (fn [_] (init)) (range n))))
+(defn build-galaxy [n fhit size mat]
+    (let [vel (build-vector 3 #(- (* (FLOATRAND) 2.0) 1.0))
+          pos (apply vector (map (fn [v] (- (+ (* (- v) DELTAT fhit) (FLOATRAND) ) 0.5)) vel))
+          mass (int (+ (* (FLOATRAND) 1000.0) 1))
+         ]
     (galaxy
-        500 ;mass
-        (count s) ;nstars
-        s ;stars
-        0 ;oldpoints
-        0 ;newpoints
-        [0.0 0.0 0.0] ;pos
-        [0.0 0.0 0.0] ;vel
-        0 ;color
+        mass ;mass
+        n ;nstars
+        (build-vector n #(build-star pos vel size mass mat)) ;stars
+        (build-vector n #(point 0 0)) ;oldpoints
+        (build-vector n #(point 0 0)) ;newpoints
+        pos ;pos
+        vel ;vel
+        0 ;XXX;color
+;  gt->galcol = NRAND(COLORBASE - 2);
+;  if (gt->galcol > 1)
+;   gt->galcol += 2; /* Mult 8; 16..31 no green stars */
+;  /* Galaxies still may have some green stars but are not all green. */
     )))
-(defn build-galaxies [n]
-    (loop [gs [] cnt 0]
-    (if (< cnt n)
-        (recur (assoc gs cnt (build-galaxy cnt)) (inc cnt))
-        gs
-    )))
+(defn build-mat [w1 w2]
+    (let [sinw1 (Math/sin w1)
+          sinw2 (Math/sin w2)
+          cosw1 (Math/cos w1)
+          cosw2 (Math/cos w2)
+         ]
+    (list
+      [cosw2 (* (- sinw1) sinw2) (* cosw1 sinw2)]
+      [0.0 cosw1 sinw1]
+      [(- sinw2) (* (- sinw1) cosw2) (* cosw1 cosw2)])
+    ))
 (defn startover [universe]
-    (let [g (build-galaxies 2) ]
+    (let [
+          w1 (* 2.0 M_PI (FLOATRAND))
+          w2 (* 2.0 M_PI (FLOATRAND))
+          mat (build-mat w1 w2)
+          size (+ GALAXYMINSIZE (* GALAXYRANGESIZE (FLOATRAND)))
+          g (build-vector 2 #(build-galaxy 100 (:hititerations universe) size mat))  
+         ]
     (assoc universe
         :step 0
         :rot_y 0.0
         :rot_x 0.0
         :galaxies g
         :ngalaxies (count g)
+        :mat mat 
+        :size (+ GALAXYMINSIZE (* GALAXYRANGESIZE (FLOATRAND)))
+        :size size
     )))
 (defn init-galaxy [width height cycles]
     (startover
@@ -204,155 +262,12 @@
 ; int         galcol;
 ;} Galaxy;
 ;
-;
-;static unistruct *universes = NULL;
-;
-;
-;static void
-;startover(ModeInfo * mi)
-;{
-; unistruct  *gp = &universes[MI_SCREEN(mi)];
-; int         i, j; /* more tmp */
-; double      w1, w2; /* more tmp */
-; double      d, v, w, h; /* yet more tmp */
-;
-; gp->step = 0;
-; gp->rot_y = 0;
-; gp->rot_x = 0;
-;
-; if (MI_BATCHCOUNT(mi) < -MINGALAXIES)
-;  free_galaxies(gp);
-; gp->ngalaxies = MI_BATCHCOUNT(mi);
-; if (gp->ngalaxies < -MINGALAXIES)
-;  gp->ngalaxies = NRAND(-gp->ngalaxies - MINGALAXIES + 1) + MINGALAXIES;
-;
-; else if (gp->ngalaxies < MINGALAXIES)
-;  gp->ngalaxies = MINGALAXIES;
-; if (gp->galaxies == NULL)
-;  gp->galaxies = (Galaxy *) calloc(gp->ngalaxies, sizeof (Galaxy));
-;
-; for (i = 0; i < gp->ngalaxies; ++i) {
-;  Galaxy     *gt = &gp->galaxies[i];
-;  double      sinw1, sinw2, cosw1, cosw2;
-;
-;  gt->galcol = NRAND(COLORBASE - 2);
-;  if (gt->galcol > 1)
-;   gt->galcol += 2; /* Mult 8; 16..31 no green stars */
-;  /* Galaxies still may have some green stars but are not all green. */
-;
-;  if (gt->stars != NULL) {
-;   (void) free((void *) gt->stars);
-;   gt->stars = NULL;
-;  }
-;  gt->nstars = (NRAND(MAX_STARS / 2)) + MAX_STARS / 2;
-;  gt->stars = (Star *) malloc(gt->nstars * sizeof (Star));
-;  gt->oldpoints = (XPoint *) malloc(gt->nstars * sizeof (XPoint));
-;  gt->newpoints = (XPoint *) malloc(gt->nstars * sizeof (XPoint));
-;
-;  w1 = 2.0 * M_PI * FLOATRAND;
-;  w2 = 2.0 * M_PI * FLOATRAND;
-;  sinw1 = SINF(w1);
-;  sinw2 = SINF(w2);
-;  cosw1 = COSF(w1);
-;  cosw2 = COSF(w2);
-;
-;  gp->mat[0][0] = cosw2;
-;  gp->mat[0][1] = -sinw1 * sinw2;
-;  gp->mat[0][2] = cosw1 * sinw2;
-;  gp->mat[1][0] = 0.0;
-;  gp->mat[1][1] = cosw1;
-;  gp->mat[1][2] = sinw1;
-;  gp->mat[2][0] = -sinw2;
-;  gp->mat[2][1] = -sinw1 * cosw2;
-;  gp->mat[2][2] = cosw1 * cosw2;
-;
-;  gt->vel[0] = FLOATRAND * 2.0 - 1.0;
-;  gt->vel[1] = FLOATRAND * 2.0 - 1.0;
-;  gt->vel[2] = FLOATRAND * 2.0 - 1.0;
-;  gt->pos[0] = -gt->vel[0] * DELTAT * gp->f_hititerations + FLOATRAND -
-;0.5;
-;  gt->pos[1] = -gt->vel[1] * DELTAT * gp->f_hititerations + FLOATRAND -
-;0.5;
-;  gt->pos[2] = -gt->vel[2] * DELTAT * gp->f_hititerations + FLOATRAND -
-;0.5;
-;
-;  gt->mass = (int) (FLOATRAND * 1000.0) + 1;
-;
-;  gp->size = GALAXYRANGESIZE * FLOATRAND + GALAXYMINSIZE;
-;
-;  for (j = 0; j < gt->nstars; ++j) {
-;   Star       *st = &gt->stars[j];
-;   XPoint     *oldp = &gt->oldpoints[j];
-;   XPoint     *newp = &gt->newpoints[j];
-;
-;   double      sinw, cosw;
-;
-;   w = 2.0 * M_PI * FLOATRAND;
-;   sinw = SINF(w);
-;   cosw = COSF(w);
-;   d = FLOATRAND * gp->size;
-;   h = FLOATRAND * exp(-2.0 * (d / gp->size)) / 5.0 * gp->size;
-;   if (FLOATRAND < 0.5)
-;    h = -h;
-;   st->pos[0] = gp->mat[0][0] * d * cosw + gp->mat[1][0] * d * sinw +
-;gp->mat[2][0] * h + gt->pos[0];
-;   st->pos[1] = gp->mat[0][1] * d * cosw + gp->mat[1][1] * d * sinw +
-;gp->mat[2][1] * h + gt->pos[1];
-;   st->pos[2] = gp->mat[0][2] * d * cosw + gp->mat[1][2] * d * sinw +
-;gp->mat[2][2] * h + gt->pos[2];
-;
-;   v = sqrt(gt->mass * QCONS / sqrt(d * d + h * h));
-;   st->vel[0] = -gp->mat[0][0] * v * sinw + gp->mat[1][0] * v * cosw +
-;gt->vel[0];
-;   st->vel[1] = -gp->mat[0][1] * v * sinw + gp->mat[1][1] * v * cosw +
-;gt->vel[1];
-;   st->vel[2] = -gp->mat[0][2] * v * sinw + gp->mat[1][2] * v * cosw +
-;gt->vel[2];
-;
-;   st->vel[0] *= DELTAT;
-;   st->vel[1] *= DELTAT;
-;   st->vel[2] *= DELTAT;
-;
-;   oldp->x = 0;
-;   oldp->y = 0;
-;   newp->x = 0;
-;   newp->y = 0;
-;  }
-;
-; }
-;
-; XClearWindow(MI_DISPLAY(mi), MI_WINDOW(mi));
-;
 ;#if 0
 ; (void) printf("ngalaxies=%d, f_hititerations=%d\n", gp->ngalaxies,
 ;gp->f_hititerations);
 ; (void) printf("f_deltat=%g\n", DELTAT);
 ; (void) printf("Screen: ");
 ;#endif /*0 */
-;}
-;
-;ENTRYPOINT void
-;init_galaxy(ModeInfo * mi)
-;{
-; unistruct  *gp;
-;
-; if (universes == NULL) {
-;  if ((universes = (unistruct *) calloc(MI_NUM_SCREENS(mi),
-;      sizeof (unistruct))) == NULL)
-;   return;
-; }
-; gp = &universes[MI_SCREEN(mi)];
-;
-;# ifdef HAVE_COCOA	/* Don't second-guess Quartz's double-buffering */
-;  dbufp = False;
-;# endif
-;
-; gp->f_hititerations = MI_CYCLES(mi);
-;
-; gp->scale = (double) (MI_WIN_WIDTH(mi) + MI_WIN_HEIGHT(mi)) / 8.0;
-; gp->midx =  MI_WIN_WIDTH(mi)  / 2;
-; gp->midy =  MI_WIN_HEIGHT(mi) / 2;
-; startover(mi);
 ;}
 ;
 ;ENTRYPOINT void
