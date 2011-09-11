@@ -1,5 +1,8 @@
 (ns galaxy.core
-    (:import (javax.swing JFrame)))
+    (:import
+        (java.awt Color Graphics Dimension)
+        (java.awt.image BufferedImage)
+        (javax.swing JPanel JFrame)))
 
 (def device (. (java.awt.GraphicsEnvironment/getLocalGraphicsEnvironment) getDefaultScreenDevice) )
 
@@ -140,6 +143,7 @@
         :size size
     )))
 (defn init-galaxy [width height cycles]
+    (assoc
     (startover
         (universe
         '([0.0 0.0 0.0]
@@ -160,7 +164,49 @@
         0 ;step
         0.0 ;rot_y
         0.0 ;rot_x
-    )))
+        )
+    )
+    :width width
+    :height height))
+(defn project-stars [galaxy x y scale mx my]
+    (let [cox (Math/cos y) six (Math/sin y) cor (Math/cos x) sir (Math/sin x)]
+;      newp->x = (short) (((cox * st->pos[0]) - (six * st->pos[2])) * gp->scale) + gp->midx;
+;      newp->y = (short) (((cor * st->pos[1]) - (sir * ((six * st->pos[0]) + (cox * st->pos[2]))))* gp->scale) + gp->midy;
+        (map (fn [star]
+            (let [pos (:pos star)] (point
+                (short (+ (* (- (* cox (first pos)) (* six (nth pos 2))) scale) mx));x
+                (short (+ (* (- (* cor (second pos)) (* sir (+ (* six (first pos)) (* cox (nth pos 2))))) scale) my));y
+            ))) (:stars galaxy))
+        ;(:newpoints galaxy)
+        ;(assoc galaxy :newpoints (:newpoints galaxy))
+    ))
+(defn render [g w h gpoints] 
+    (let [
+          img (new BufferedImage w h (. BufferedImage TYPE_INT_RGB))
+          bg (. img (getGraphics)) 
+          red (. Color red)
+          blue (. Color blue)
+         ] 
+         (doto bg
+           (.setColor (. Color black))
+           (.fillRect 0 0 w h))
+         (dorun
+            (map (fn [ps c] (println c) (. bg setColor c) 
+                (dorun (map (fn [p] (println p)(. bg fillRect (:x p) (:y p) 1 1)) ps)))
+            gpoints [red blue]))
+         (. g (drawImage img 0 0 nil))
+         ))
+(defn draw-universe [universe]
+    (let [f (fn [galaxy] (apply project-stars galaxy (map universe '(:rot_x :rot_y :scale :midx :midy))))
+          width (:width universe)
+          height (:height universe)
+          gpoints (map f (:galaxies universe))
+          panel (doto (proxy [JPanel] []
+                            (paint [g] (render g width height gpoints)))
+                 (.setPreferredSize (new Dimension width height)))
+          frame (doto (new JFrame) (.add panel) .pack .show)
+        ]
+    ))
 
 ;#ifdef STANDALONE
 ;# define DEFAULTS	"*delay:  20000  \n"   \
@@ -246,29 +292,6 @@
 ;/* #define COLORSTEP  (NUMCOLORS/COLORBASE) */
 ;# define COLORSTEP (MI_NCOLORS(mi)/COLORBASE)
 ;
-;
-;typedef struct {
-; double      pos[3], vel[3];
-;} Star;
-;
-;
-;typedef struct {
-; int         mass;
-; int         nstars;
-; Star       *stars;
-; XPoint     *oldpoints;
-; XPoint     *newpoints;
-; double      pos[3], vel[3];
-; int         galcol;
-;} Galaxy;
-;
-;#if 0
-; (void) printf("ngalaxies=%d, f_hititerations=%d\n", gp->ngalaxies,
-;gp->f_hititerations);
-; (void) printf("f_deltat=%g\n", DELTAT);
-; (void) printf("Screen: ");
-;#endif /*0 */
-;}
 ;
 ;ENTRYPOINT void
 ;draw_galaxy(ModeInfo * mi)
