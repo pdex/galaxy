@@ -213,25 +213,9 @@
         (/ 1 (* s (Math/sqrt s)))
         (/ 1 (* EPSILON sqrt_EPSILON))
     )))
-(defn galaxy-towards-galaxy [pos g] ())
-(defn gravitate-galaxy [g og] og)
-;(defn gravitate-galaxies [g gs] (doall (map #(gravitate-galaxy g %) gs)))
-(defn gravitate-galaxies [galaxy galaxies]
-    (loop [r ()
-           g galaxy
-           og (first galaxies)
-           gs (rest galaxies)]
-        (let [c (galaxy-towards-galaxy g og)
-              ng g ;XXX flesh out how ng is made from g
-              nog og]
-        (if (not (empty? gs))
-            (recur (conj r nog) g (first gs) (rest gs))
-            (cons ng r)))
-    ))
-(defn move-galaxy [g u]
-    (println "move galaxy")
-    (assoc g :stars (move-stars (:stars g) (:galaxies u)))
-    (gravitate-galaxies g (:galaxies u))
+(defn move-galaxy 
+    ([g ags] (change-here (assoc g :stars (move-stars (:stars g) ags))))
+    ([g ags rgs b] (change-here (assoc g :stars (move-stars (:stars g) ags)) rgs b))
     )
 (defn distances [pa pb] (map - pa pb))
 (defn scalar-product [ds] (apply + (map #(* % %) ds)))
@@ -240,20 +224,20 @@
 (defn sum-scalars [s] (reduce #(map + %1 %2) s))
 (defn scalar-mult [s m] (map #(* % m) s))
 (defn apply-mass [b gs] (map #(scalar-mult %1 (:mass %2)) b gs))
-(defn change-here [g gs b] (let [v (sum-scalars (cons (:vel g) (apply-mass b gs)))]
-    (assoc g
-    :vel v
-    :pos (map #(+ %1 (* %2 DELTAT)) (:pos g) v))))
+(defn change-here 
+    ([g] (assoc g :pos (map #(+ %1 (* %2 DELTAT)) (:pos g) (:vel g))))
+    ([g gs b] (let [v (sum-scalars (cons (:vel g) (apply-mass b gs)))]
+        (assoc g
+        :vel v
+        :pos (map #(+ %1 (* %2 DELTAT)) (:pos g) v)))))
 (defn change-there-helper [g b m] (map - (:vel g) (map #(* % m) b)))
 (defn change-there [g gs b] (map #(assoc %1 :vel (change-there-helper %1 %2 (:mass g))) gs b))
 (defn poop-galaxy [galaxies]
-    (let [move-galaxy (fn [g ags gs b] (change-here (assoc g :stars (move-stars (:stars g) ags)) gs b))]
     (loop [r []
            g (first galaxies)
            gs (rest galaxies)
           ]
         (println (:pos g))
-        (println (empty? gs))
         (if (not (empty? gs))
             (let [base (base-change g gs) ngs (change-there g gs base)]
                 (recur 
@@ -261,8 +245,9 @@
                     (first ngs) ; next galaxy to move
                     (rest ngs)) ; remaining seq of galaxies
             )
-            (conj r g))
-    )))
+            (conj r (move-galaxy g (conj r g))))
+    ))
+    ;)
 (defn move-galaxies [universe] 
     (assoc @universe :galaxies (poop-galaxy (:galaxies @universe))))
 (defn draw-universe [universe]
