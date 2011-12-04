@@ -138,7 +138,6 @@
         :size size
     )))
 (defn init-galaxy [width height cycles]
-    (ref
     (assoc
     (startover
         (universe
@@ -163,7 +162,32 @@
         )
     )
     :width width
-    :height height)))
+    :height height))
+; XXX: need to factor out randomness so it's easier to test
+; XXX: need to remove dead structures that we don't need in clojure
+(defn setup
+    (let [width 500 height 500 cycles 1000]
+    (assoc (startover
+        (universe
+        (build-mat)
+        (/ (+ width height) 8.0) ;scale
+        (/ width 2) ;midx
+        (/ height 2) ;midy
+        0.0 ;size
+        [0.0 0.0 0.0] ;diff
+        [ ] ;galaxies
+        0 ;ngalaxies
+        cycles ;hititerations
+        0 ;step
+        0.0 ;rot_y
+        0.0 ;rot_x
+        )
+    )
+    :width width
+    :height height
+    )
+    )
+    )
 (defn project-stars [galaxy x y scale mx my]
     (let [cox (Math/cos y) six (Math/sin y) cor (Math/cos x) sir (Math/sin x)]
 ;      newp->x = (short) (((cox * st->pos[0]) - (six * st->pos[2])) * gp->scale) + gp->midx;
@@ -213,10 +237,6 @@
         (/ 1 (* s (Math/sqrt s)))
         (/ 1 (* EPSILON sqrt_EPSILON))
     )))
-(defn move-galaxy 
-    ([g ags] (change-here (assoc g :stars (move-stars (:stars g) ags))))
-    ([g ags rgs b] (change-here (assoc g :stars (move-stars (:stars g) ags)) rgs b))
-    )
 (defn distances [pa pb] (map - pa pb))
 (defn scalar-product [ds] (apply + (map #(* % %) ds)))
 (defn base-change [g gs] (let [glue (fn [ds] (map #(* % (change-galaxy-by (scalar-product ds))) ds))]
@@ -230,6 +250,10 @@
         (assoc g
         :vel v
         :pos (map #(+ %1 (* %2 DELTAT)) (:pos g) v)))))
+(defn move-galaxy 
+    ([g ags] (change-here (assoc g :stars (move-stars (:stars g) ags))))
+    ([g ags rgs b] (change-here (assoc g :stars (move-stars (:stars g) ags)) rgs b))
+    )
 (defn change-there-helper [g b m] (map - (:vel g) (map #(* % m) b)))
 (defn change-there [g gs b] (map #(assoc %1 :vel (change-there-helper %1 %2 (:mass g))) gs b))
 (defn poop-galaxy [galaxies]
@@ -251,7 +275,7 @@
 (defn move-galaxies [universe] 
     (assoc @universe :galaxies (poop-galaxy (:galaxies @universe))))
 (defn draw-universe [universe]
-    (let [f (fn [galaxy] (apply project-stars galaxy (map universe '(:rot_x :rot_y :scale :midx :midy))))
+    (let [f (fn [galaxy] (apply project-stars galaxy (map @universe '(:rot_x :rot_y :scale :midx :midy))))
           width (:width @universe)
           height (:height @universe)
           panel (doto (proxy [JPanel] []
@@ -261,8 +285,8 @@
                                      ]
                                     (println "paint")
                                     (render g width height gpoints)
-                                    ;(move-galaxies universe)
-                                    ;(. this repaint)
+                                    (compare-and-set! universe @universe (move-galaxies universe))
+                                    (. this repaint)
                                 )
                             ))
                  (.setPreferredSize (new Dimension width height)))
