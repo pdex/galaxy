@@ -119,6 +119,9 @@
       [0.0 cosw1 sinw1]
       [(- sinw2) (* (- sinw1) cosw2) (* cosw1 cosw2)])
     ))
+(defn build-galaxies [n build-galaxy]
+  (build-vector n build-galaxy))
+
 (defn startover [universe]
     (let [
           w1 (* 2.0 M_PI (FLOATRAND))
