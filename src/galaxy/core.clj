@@ -2,34 +2,15 @@
     (:import
         (java.awt Color Graphics Dimension)
         (java.awt.image BufferedImage)
-        (javax.swing JPanel JFrame)))
+        (javax.swing JPanel JFrame))
+    (:use (galaxy constant build render)))
 
-(def device (. (java.awt.GraphicsEnvironment/getLocalGraphicsEnvironment) getDefaultScreenDevice) )
-
-(defn fullscreen [device window f]
-    (try (. device setFullScreenWindow window)
-    (finally (. device setFullScreenWindow nil) ) ) )
-
-(def mywin (proxy [JFrame]  []
-    (paint [g] (. g drawString "Hello World!", 20, 50))))
-
-(defn show [win x y] (doto win (.setSize x y) (.setVisible true)))
 (def random (java.util.Random.))
-(def M_PI 3.1415926535)
 (defn LRAND [] (bit-and (. random nextLong) 0x7fffffff))
 (defn NRAND [n] (mod (LRAND) n))
-(def MAXRAND 2147483648.0)
 (defn FLOATRAND [] (/ (LRAND) MAXRAND))
-(def DELTAT (* 50 0.0001))
-(def GALAXYRANGESIZE 0.1)
-(def GALAXYMINSIZE 0.15)
-(def QCONS 0.001)
-(def EPSILON 0.00000001)
-(def sqrt_EPSILON 0.0001)
-(def eps (let [e (/ 1 (* EPSILON sqrt_EPSILON DELTAT DELTAT QCONS))] (* e (Math/sqrt e))))
+
 (defn randomColor [] (. random nextInt))
-(defn point [x y] { :x x :y y })
-(defn star [pos vel] { :pos pos :vel vel })
 (defn galaxy [mass nstars stars oldpoints newpoints pos vel color] {
     :mass mass
     :nstars nstars
