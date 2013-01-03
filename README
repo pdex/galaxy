@@ -4,7 +4,15 @@ FIXME: write description
 
 ## Usage
 
-FIXME: write
+FIXME: this will work for the time being:
+
+```
+$ lein repl
+REPL started; server listening on localhost port 11714
+user=> (use '(galaxy demo render))
+nil
+user=> (build-frame (build-render demo))
+```
 
 ## Installation
 
