@@ -11,7 +11,7 @@ $ lein repl
 REPL started; server listening on localhost port 11714
 user=> (use '(galaxy demo render))
 nil
-user=> (build-frame (build-render demo))
+user=> (let [animation (build-animation (build-frame (build-render demo)))] (send-off animator animation))
 ```
 
 ## Installation
