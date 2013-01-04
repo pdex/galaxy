@@ -27,9 +27,10 @@
   (. bg setColor color)
   (dorun (map #(render-star bg %) stars)))
 
-(defn render-galaxies [bg])
+(defn render-galaxies [bg galaxies]
+  (dorun (map #(render-stars bg (:color %) (:stars %)) galaxies)))
 
-(defn render [g stars] 
+(defn render [g galaxies]
   (let [img (new BufferedImage width height (. BufferedImage TYPE_INT_RGB))
         bg (. img (getGraphics))
         red (. Color red)
@@ -37,15 +38,9 @@
        (doto bg
          (.setColor (. Color black))
          (.fillRect 0 0 width height))
-       (render-stars bg Color/red stars)
-;       (dorun
-;          (map (fn [ps c]
-;              (println c)
-;              (. bg setColor c) 
-;              (dorun (map (fn [p] (comment println p)(. bg fillRect (:x p) (:y p) 1 1)) ps)))
-;          points colors))
-;       )
+       (render-galaxies bg galaxies)
        (. g (drawImage img 0 0 nil))
+    ;(println "render!")
   )
 )
 
@@ -56,4 +51,4 @@
     frame))
 
 (defn build-render [universe]
-  (fn [g] (render g (:stars (first @(:galaxies universe))))))
+  (fn [g] (render g @(:galaxies universe))))
