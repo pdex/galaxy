@@ -52,3 +52,13 @@
 
 (defn build-render [universe]
   (fn [g] (render g @(:galaxies universe))))
+
+(def animator (agent nil))
+
+
+(defn build-animation [panel]
+(defn animation [_]
+  (send-off *agent* #'animation)
+  (. panel (repaint))
+  (. Thread (sleep 2000)))
+  )
