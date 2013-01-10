@@ -1,9 +1,16 @@
-(ns galaxy.constant)
+(ns galaxy.constant
+  (:import (java.awt Color)))
 
 ; mininum number of galaxies
 (def MINGALAXIES 2)
 ; maximum number of galaxies
 (def MAXGALAXIES 5)
+; available color palette
+(def COLOR-PALETTE [
+  Color/red
+  Color/green
+  Color/blue
+  ])
 ; not sure
 (def MAXRAND 2147483648.0)
 (def DELTAT (* 50 0.0001))

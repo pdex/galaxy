@@ -59,3 +59,6 @@
 
 (defn random-galaxy-count []
   (max MINGALAXIES (rand-int MAXGALAXIES)))
+
+(defn random-color []
+  (COLOR-PALETTE (rand-int (- (count COLOR-PALETTE) 1))))
