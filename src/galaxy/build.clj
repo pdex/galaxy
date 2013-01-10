@@ -30,15 +30,18 @@
   :pos    ; current position in 3D
   :vel    ; current velocity in 3D
   :point) ; current point in 2D
-(defn star [pos vel point] (struct Star pos vel point))
+(defn star [pos vel point] (ref (struct Star pos vel point)))
 
 (defstruct Galaxy
   :color  ; color to render this galaxy
+  :mass   ; mass of this galaxy
+  :pos    ; position of this galaxy
+  :vel    ; velocity of this galaxy
   :stars) ; stars in this galaxy
-(defn galaxy [color stars] (struct Galaxy color stars))
+(defn galaxy [color mass pos vel stars] (ref (struct Galaxy color mass pos vel stars)))
 
 (defstruct Universe
   :galaxies ; galaxies in this universe
   )
-(defn universe [galaxies] (struct Universe (ref galaxies)))
+(defn universe [galaxies] (struct Universe galaxies))
 

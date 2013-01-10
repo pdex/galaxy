@@ -20,15 +20,18 @@
 (def height 500)
 
 (defn render-star [bg star]
-  (let [x (:x (:point star)) y (:y (:point star))]
+  (let [x (:x (:point @star)) y (:y (:point @star))]
   (. bg fillRect x y 1 1)))
 
 (defn render-stars [bg color stars]
   (. bg setColor color)
   (dorun (map #(render-star bg %) stars)))
 
+(defn render-galaxy [bg galaxy]
+  (render-stars bg (:color @galaxy) (:stars @galaxy)))
+
 (defn render-galaxies [bg galaxies]
-  (dorun (map #(render-stars bg (:color %) (:stars %)) galaxies)))
+  (dorun (map #(render-galaxy bg %) galaxies)))
 
 (defn render [g galaxies]
   (let [img (new BufferedImage width height (. BufferedImage TYPE_INT_RGB))
@@ -51,10 +54,9 @@
     frame))
 
 (defn build-render [universe]
-  (fn [g] (render g @(:galaxies universe))))
+  (fn [g] (render g (:galaxies universe))))
 
 (def animator (agent nil))
-
 
 (defn build-animation [panel]
 (defn animation [_]
