@@ -9,9 +9,9 @@ FIXME: this will work for the time being:
 ```
 $ lein repl
 REPL started; server listening on localhost port 11714
-user=> (use '(galaxy demo render))
+user=> (use 'galaxy.demo)
 nil
-user=> (let [animation (build-animation (build-frame (build-render demo)))] (send-off animator animation))
+user=> (run-demo)
 ```
 
 ## Installation
