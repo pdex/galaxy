@@ -62,3 +62,6 @@
 
 (defn random-color []
   (COLOR-PALETTE (rand-int (- (count COLOR-PALETTE) 1))))
+
+(defn random-star-count []
+  (max MIN-STARS (rand-int MAX-STARS)))

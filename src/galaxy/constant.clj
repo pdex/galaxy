@@ -11,6 +11,10 @@
   Color/green
   Color/blue
   ])
+; minimum number of stars in a galaxy
+(def MIN-STARS 1000)
+; maximum number of stars in a galaxy
+(def MAX-STARS 3000)
 ; not sure
 (def MAXRAND 2147483648.0)
 (def DELTAT (* 50 0.0001))
