@@ -15,7 +15,8 @@
 ;  * width?
 ;  * galaxies
 
-(ns galaxy.build)
+(ns galaxy.build
+  (:use (galaxy constant floatmath)))
 
 (defstruct Point :x :y)
 (defn point [x y] (struct Point x y))
@@ -45,3 +46,13 @@
   )
 (defn universe [galaxies] (struct Universe galaxies))
 
+; tweaky math stuff
+(defn build-seed-matrix []
+  (let [w1 (* 2.0 M_PI (FLOATRAND)) sinw1 (Math/sin w1) cosw1 (Math/cos w1)
+        w2 (* 2.0 M_PI (FLOATRAND)) sinw2 (Math/sin w2) cosw2 (Math/cos w2)]
+    [[cosw2     (* (- sinw1) sinw2) (* cosw1 sinw2)]
+     [0.0       cosw1               sinw1]
+     [(- sinw2) (* (- sinw1) cosw2) (* cosw1 cosw2)]]))
+
+(defn build-seed-size []
+  (+ (* GALAXYRANGESIZE (FLOATRAND)) GALAXYMINSIZE))
