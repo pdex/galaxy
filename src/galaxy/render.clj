@@ -59,8 +59,7 @@
 (def animator (agent nil))
 
 (defn build-animation [panel]
-(defn animation [_]
-  (send-off *agent* #'animation)
-  (. panel (repaint))
-  (. Thread (sleep 2000)))
-  )
+  (defn animation [_]
+    (send-off *agent* #'animation)
+    (. panel (repaint))
+    (. Thread (sleep 2000))))
