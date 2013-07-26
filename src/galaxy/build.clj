@@ -65,3 +65,14 @@
 
 (defn random-star-count []
   (max MIN-STARS (rand-int MAX-STARS)))
+
+; tweaky builder for tweaky math
+(defn build-seed-matrix [w1 w2]
+  (let [sinw1 (Math/sin w1)
+        sinw2 (Math/sin w2)
+        cosw1 (Math/cos w1)
+        cosw2 (Math/cos w2)]
+    (list
+      [cosw2     (* (- sinw1) sinw2) (* cosw1 sinw2)]
+      [0.0       cosw1               sinw1]
+      [(- sinw2) (* (- sinw1) cosw2) (* cosw1 cosw2)])))
