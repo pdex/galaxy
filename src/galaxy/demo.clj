@@ -57,7 +57,7 @@
 (defn a-bunch-of-random-stars [mass position size velocity seed-matrix]
   ;(let [mass (:mass galaxy) position (:position galaxy) size (:size galaxy) velocity (:velocity galaxy)])
   (apply vector (doall
-    (map (fn [_] (random-star mass position size velocity seed-matrix)) (range 1000)))))
+    (map (fn [_] (random-star mass position size velocity seed-matrix)) (range (random-star-count))))))
 (defn a-galaxy [color mass position velocity] (galaxy color mass position velocity (a-bunch-of-random-stars mass position 100 velocity a-seed-matrix)))
 
 (def demo
@@ -68,6 +68,31 @@
 ;  ])
   ]))
 
-(defn run-demo [] (let [animation (build-animation (build-frame (build-render demo)))] (send-off animator animation)))
+(def simulator (agent demo))
+
+(defn simulation [universe]
+  (send-off *agent* #'simulation)
+  (. Thread (sleep 2000))
+  universe)
+
+(comment
+  for every galaxy in the universe
+    for every star in that galaxy
+      for every galaxy in the universe
+        impact star's velocity
+      adjust star's position
+    for every galaxy in the universe after this galaxy
+      impact each other's velocity
+    adjust galaxy's position
+  )
+
+
+(defn run-demo []
+  (let [animation (build-animation (build-frame (build-render demo)))]
+    (send-off animator animation)
+    (send-off simulator simulation)
+    nil))
+
+(run-demo)
 
 ;(dosync (alter (first (:stars @(first (:galaxies demo)))) assoc-in [:point :x] 40))
